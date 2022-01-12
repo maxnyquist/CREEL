@@ -23,26 +23,98 @@ options(scipen = 999)
 
 getwd()
 ###Database connection and file import####
-creel.db <- paste0("C:/CreelDatabase/2017 Creel survey database all years1.mdb")
-con <- dbConnect(odbc::odbc(),
-                 .connection_string = paste("driver={Microsoft Access Driver (*.mdb)}",
-                                            paste0("DBQ=", creel.db), "Uid=Admin;Pwd=;", sep = ";")
-                 )
+### CONNECT TO WQ DATABASE ####
+  ### Set DB
+  database <- 'DCR_DWSP'
+  schema <- 'Wachusett'
+  tz <- 'America/New_York'
+  ### Connect to Database 
+  con <- dbConnect(odbc::odbc(), 'DCR_DWSP', timezone = tz)
+  ### See the tables
+  tables <- dbListTables(con, schema_name = schema) %>% print()
+  ### Always disconnect and rm connection when done with db
+  dbDisconnect(con)
+  rm(con, dataframe)
+
+  
+  
+  ### reformat to read multiple tables?
+  
+  
+  ### Run after downloading from biobasemaps.com 
+  # csv_files <- list.files(biobase_raw,full.names = TRUE, pattern = "\\.csv$")
+  # csv_files
+  # ### Manually update with file to be processed
+  #  tables_in <- c(3:6)
+  tables <- tables[tables_in]
+
+  for (i in tables){
+    dfs <- dbReadTable(con, tables[i])
+  }
+
+  data <- lapply(tables, dbReadTable(con, schema))
+
+  df_name <- df_name[tables_in]
+
+   # csv_files <- csv_files[csv_in]
+  # data <- lapply(csv_files, read_csv)
+  # df_name <- gsub(".csv", "", list.files(biobase_raw, pattern = "\\.csv$"))
+  # df_name <- df_name[csv_in]
+  # names(data) <- df_name
+  # names(data) <- 'df'
+  # list2env(data,.GlobalEnv)
+  # change these to df. style
+  Creel_AgentResult <- dbReadTable(con, Id(schema = schema, table = 'tbl_Creel_AgentResult'))
+  Creel_Agents <- dbReadTable(con, Id(schema = schema, table = 'tbl_Creel_Agents'))
+  Creel_FishCaught <- dbReadTable(con, Id(schema = schema, table = 'tbl_Creel_FishCaught'))
+  Creel_SurveyResult <- dbReadTable(con, Id(schema = schema, table = 'tbl_Creel_SurveyResult'))
+  df.Survey_Agent_Result <- left_join(Creel_SurveyResult, Creel_AgentResult, by = "LoopNumber")
+  df.Fish_Survey_Agent <- left_join(Creel_FishCaught, df.Survey_Agent_Result, by = "SurveyNumber")
+  
+  rm(Creel_Agents)
+  # Sys.setenv("R_ZIPCMD" = "C:/rtools40/usr/bin/zip.exe")
+  # Sys.setenv(PATH = paste("C:/rtools40/usr/bin", Sys.getenv("PATH"), sep=";"))
+  # Sys.setenv(BINPREF = "C:/rtools40/mingw$(WIN)/usr/bin/")
+  # # Check system environments
+  # Sys.getenv("R_ZIPCMD", "zip")
+  # Sys.getenv("PATH") # Rtools should be listed now
+  #  
+
+### below script connection method "depreciated"  
+# creel.db <- paste0("C:/CreelDatabase/2017 Creel survey database all years1.mdb")
+# con <- dbConnect(odbc::odbc(),
+#                  .connection_string = paste("driver={Microsoft Access Driver (*.mdb)}",
+#                                             paste0("DBQ=", creel.db), "Uid=Admin;Pwd=;", sep = ";")
+#                  )
 
 ###1/22/2020. Change made directly in Creel database. 4/10/2011, Friday, AM Loop, Bruce Fant. Loop number changed from 4 to 3. Friday changed to Sunday. Changes made in Agent sheet 
 #including timezone set the times incorrectly
 #timezone = "America/New_York"
-dbListTables(con)
-#create data.frames of relevant access tbls. 
-#Fish Caught Query is a combination of Fish Caught, Agent Sheet, and Survey Table. Consider recreating in R
-fishquery.df <- dbReadTable(con, "Fish Caught Query")
-fish.df <- dbReadTable(con, "Fish Caught")
-survey.df <- dbReadTable(con, "Survey Table")
-agent.df <- dbReadTable(con, "Agent Sheet")
-namesagents <- dbReadTable(con, "Survey Agent")
+# dbListTables(con)
+# #create data.frames of relevant access tbls. 
+# #Fish Caught Query is a combination of Fish Caught, Agent Sheet, and Survey Table. Consider recreating in R
+# fishquery.df <- dbReadTable(con, "Fish Caught Query")
+# fish.df <- dbReadTable(con, "Fish Caught")
+# survey.df <- dbReadTable(con, "Survey Table")
+# agent.df <- dbReadTable(con, "Agent Sheet")
+# namesagents <- dbReadTable(con, "Survey Agent")
 
 
 ####SCRIPT BEGIN####
+ 
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
 #fix dates in df to create correct datetimes 
 survey.df <- survey.df %>% 
   mutate(., Time.Started.Fishing = as.POSIXct(paste0(SurveyDate, format(survey.df$Time.Started.Fishing, "%H:%M:%S")))) %>% 
