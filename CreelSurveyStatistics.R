@@ -127,7 +127,8 @@ df.survey <- df.agentresult %>%
 ### df.totals further groups Angler count and Angler survey totals, while also counting number of distinct survey days    
 df.totals <- df.survey %>% 
   group_by(year(LoopDate), month(LoopDate), Type) %>% 
-  summarise(SurveyDays = n_distinct(LoopDate), Angler_Count_sum = sum(Angler_Count_sum), Angler_Surveyed_sum = sum(Angler_Surveyed_sum))
+  summarise(SurveyDays = n_distinct(LoopDate), Angler_Count_sum = sum(Angler_Count_sum), Angler_Surveyed_sum = sum(Angler_Surveyed_sum)) %>% 
+  rename("year" = "year(LoopDate)", "month" = "month(LoopDate)" )
 
 ### Days per Month Builder ####
 ### This should work with any new incoming data. Do not want to update year information 
@@ -163,18 +164,20 @@ creel.wknd.calendar <- create.calendar(name = "creel.wknd.calendar", weekdays = 
 #holidays()
 calendar$weekdays <- bizdays(from = calendar$start.date, to = calendar$end.date, cal = "creel.week.calendar")
 calendar$weekenddays <- bizdays(from = calendar$start.date, to = calendar$end.date, cal = "creel.wknd.calendar" )
-
-v1 <- seq(from = ymd(paste(years.survey[1], months.survey[1], "1", sep = "-")), to = ymd(as.character(paste(years.survey[1], months.survey[1], "30", sep = "-"))), by='day')
-v2 <- seq(from = ymd(paste(years.survey[2], months.survey[1], "1", sep = "-")), to = ymd(as.character(paste(years.survey[2], months.survey[1], "30", sep = "-"))), by='day')
-
-v1 <- seq(from = ymd(paste(years.survey[1], months.survey[1], "1", sep = "-")), to = ymd(as.character(paste(years.survey[1], months.survey[1], "30", sep = "-"))), by='day')
-v2 <- seq(from = ymd(paste(years.survey[2], months.survey[1], "1", sep = "-")), to = ymd(as.character(paste(years.survey[2], months.survey[1], "30", sep = "-"))), by='day')
-
-### this works with a short sequence
-working_days <- sum(wday(v1)>1 & wday(v1)<7)
-off_days <- sum(wday(v1)==1 | wday(v1)==7)
-
-
+# 
+# v1 <- seq(from = ymd(paste(years.survey[1], months.survey[1], "1", sep = "-")), to = ymd(as.character(paste(years.survey[1], months.survey[1], "30", sep = "-"))), by='day')
+# v2 <- seq(from = ymd(paste(years.survey[2], months.survey[1], "1", sep = "-")), to = ymd(as.character(paste(years.survey[2], months.survey[1], "30", sep = "-"))), by='day')
+# 
+# v1 <- seq(from = ymd(paste(years.survey[1], months.survey[1], "1", sep = "-")), to = ymd(as.character(paste(years.survey[1], months.survey[1], "30", sep = "-"))), by='day')
+# v2 <- seq(from = ymd(paste(years.survey[2], months.survey[1], "1", sep = "-")), to = ymd(as.character(paste(years.survey[2], months.survey[1], "30", sep = "-"))), by='day')
+# 
+# ### this works with a short sequence
+# working_days <- sum(wday(v1)>1 & wday(v1)<7)
+# off_days <- sum(wday(v1)==1 | wday(v1)==7)
+# 
+df.test <- left_join(df.totals, calendar) %>%
+  select(year, month, Type, SurveyDays, Angler_Count_sum , Angler_Surveyed_sum, weekdays, weekenddays)
+### gather or spread this table, match up Type and weekend/weekday total days  
 ### testing w filter code 
 # test <- df.survey %>% 
 #   filter(month(LoopDate) == "4" & Type == "Weekend")
