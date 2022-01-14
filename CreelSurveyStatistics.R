@@ -8,7 +8,7 @@
 ##############################################################################.
 
 ### LOAD PACKAGES ####
-pkg <- c("tidyverse", "magrittr", "lubridate","RODBC", "DBI", "odbc")
+pkg <- c("tidyverse", "magrittr", "lubridate","RODBC", "DBI", "odbc", "bizdays")
 sapply(pkg, library, character.only = TRUE)
 
 ### SET OPTIONS/ENV VARIABLES ####
@@ -88,7 +88,7 @@ config <- as.character(R_Config$CONFIG_VALUE)
 ### SCRIPT BEGIN ####
 
   
-### Estimated Angler Hours ####
+### Begin Estimated Angler Hours ####
 ### rename for testing  
 df.agentresult <- Creel_AgentResult  
 #strptime(df.agentresult$SunUpET, format = "%H:%M:%S", tz = "EST")
@@ -129,61 +129,61 @@ df.totals <- df.survey %>%
   group_by(year(LoopDate), month(LoopDate), Type) %>% 
   summarise(SurveyDays = n_distinct(LoopDate), Angler_Count_sum = sum(Angler_Count_sum), Angler_Surveyed_sum = sum(Angler_Surveyed_sum))
 
-### Calculate number of Days in the month depending on year 
+### Days per Month Builder ####
 ### This should work with any new incoming data. Do not want to update year information 
 years.survey <- unique(df.totals$`year(LoopDate)`)
 months.survey <- unique(df.totals$`month(LoopDate)`)
+
+maxdays <- as.data.frame(days_in_month(months.survey))
+maxdays$months <- row.names(maxdays)
+maxdays$months <-match(x$months, month.abb)
 #months.survey <- paste0("0",unique(df.totals$`month(LoopDate)`))
+calendar <- merge(years.survey, months.survey)
+#calendar <- c(t(outer(years.survey, months.survey, paste, sep = "-")))
+#calendar <- outer(years.survey, months.survey, FUN = paste, sep = "-")
+#cal.df <- as.data.frame(calendar)
+#x$months <- as.character(x$months)
+calendar <-  left_join(calendar, maxdays, by = c("y" = "months")) %>% 
+  rename("year" ="x","month" = "y" , "end.day"= "days_in_month(months.survey)")%>% 
+  mutate(start.date = paste(year, month, 1, sep = "-")) %>% 
+  mutate(end.date = paste(year, month, end.day, sep = "-")) 
+calendar$start.date <- ymd(calendar$start.date)
+calendar$end.date <- ymd(calendar$end.date)
 
-start <- ymd(paste(years.survey[1], months.survey[1], "1", sep = "-"))
-end <-  ymd(paste(years.survey[2], months.survey[1], "30", sep = "-")) 
-
-Dates1 <- as.Date("2011-01-30") + rep(0, 10)
-Dates2 <- as.Date("2011-02-04") + seq(0, 9)
-Nweekdays <- Vectorize(function(a, b) 
-  sum(!weekdays(seq(a, b, "days")) %in% c("Saturday", "Sunday")))
-Nweekdays(v1, v2)
-
-Dates1 <- as.Date("2011-01-1") + rep(0, 10)
-Dates2 <- Sys.Date() + seq(0, 9)
-Nweekdays <- function(a, b) 
-{
-    dates <- as.numeric((as.Date(a, "%y-%m-%d")):(as.Date(b,"%y-%m-%d")))
-    dates <- dates[- c(1,length(dates))]
-    return(sum(!dates%%7%in%c(0,6)))
-    
-}
-
-Nweekdays(start, end)
-
-sum(!weekdays(seq(a, b, "days")) %in% c("Saturday", "Sunday")))
-
-v1<- seq(from = ymd(19000101), to = ymd(20000101), by='month')
-v2<- seq(from = ymd(20000101), to = ymd(21000101), by='month')
-
-v1 <- seq(from = ymd(paste(years.survey[1], months.survey[1], "1", sep = "-")), to = ymd(as.character(paste(years.survey[1], months.survey[1], "30", sep = "-"))), by='day')
-v2 <- seq(from = ymd(paste(years.survey[2], months.survey[1], "1", sep = "-")), to = ymd(as.character(paste(years.survey[2], months.survey[1], "30", sep = "-"))), by='day')
+#calendar2$end.date <- paste(x, y, days_in_month(months.survey), sep = "-")
+# (start.date = paste(x, y, 1, sep = "-"),
+# start <- ymd(paste(years.survey[1], months.survey[1], "1", sep = "-"))
+# end <-  ymd(paste(years.survey[2], months.survey[1], "30", sep = "-")) 
+# first <- as.Date(cut(start, "month"))
+# last <- as.Date(cut(first +31, "month")) - 1
+# 
+### Financial argument must be FALSE. Financial calendars do not consider ending business day 
+creel.week.calendar <- create.calendar(name = "creel.week.calendar",weekdays = c("saturday", "sunday"), financial = FALSE)
+creel.wknd.calendar <- create.calendar(name = "creel.wknd.calendar", weekdays = c("monday", "tuesday", "wednesday", "thursday", "friday"), financial = FALSE)
+#holidays()
+calendar$weekdays <- bizdays(from = calendar$start.date, to = calendar$end.date, cal = "creel.week.calendar")
+calendar$weekenddays <- bizdays(from = calendar$start.date, to = calendar$end.date, cal = "creel.wknd.calendar" )
 
 v1 <- seq(from = ymd(paste(years.survey[1], months.survey[1], "1", sep = "-")), to = ymd(as.character(paste(years.survey[1], months.survey[1], "30", sep = "-"))), by='day')
 v2 <- seq(from = ymd(paste(years.survey[2], months.survey[1], "1", sep = "-")), to = ymd(as.character(paste(years.survey[2], months.survey[1], "30", sep = "-"))), by='day')
 
+v1 <- seq(from = ymd(paste(years.survey[1], months.survey[1], "1", sep = "-")), to = ymd(as.character(paste(years.survey[1], months.survey[1], "30", sep = "-"))), by='day')
+v2 <- seq(from = ymd(paste(years.survey[2], months.survey[1], "1", sep = "-")), to = ymd(as.character(paste(years.survey[2], months.survey[1], "30", sep = "-"))), by='day')
 
-
-count_weekdays<- Vectorize(function(from,to) sum(!wday(seq(from, to, "days")) %in% c(1,7)))
- count_weekdays(Dates1, Dates2)
-
-Dates <- seq.Date(from = start, to = end, by = 1) 
-df <- as.data.frame(table(month(Dates), wday(Dates)))
- 
-
-### this works  
+### this works with a short sequence
 working_days <- sum(wday(v1)>1 & wday(v1)<7)
 off_days <- sum(wday(v1)==1 | wday(v1)==7)
 
 
-print(working_days)
-
 ### testing w filter code 
 # test <- df.survey %>% 
 #   filter(month(LoopDate) == "4" & Type == "Weekend")
-# 
+
+### Plotting and Fish Shapes  ####
+install.packages("fishualize")
+library(devtools)
+devtools::install_github("nschiett/fishualize", force = TRUE)
+library(fishualize)
+library(fishualize)
+fishapes()
+
